@@ -1,0 +1,14 @@
+{
+  "name": "router-api",
+  "version": "0.0.1",
+  "description": "Router API",
+  "dependencies": {
+    "chai": "^3.0.0",
+    "mocha": "^2.2.5"
+  },
+  "scripts": {
+    "test": "mocha",
+    "start": "node run_analysis.js"
+  },
+  "author": "Rafael Tartalia"
+}
