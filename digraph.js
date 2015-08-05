@@ -12,83 +12,49 @@
 
 var assert = require('assert');
 
-module.exports = Digraph;
+module.exports.Digraph = Digraph;
+module.exports.Vertex = Vertex; 
 
-function Digraph() {
+function Vertex(id) {
+    this.id = id;
+    this.edges = [];
+}
 
-    //vertices hash obj - find an element should be constant O(1)
-    this.verticesIndex = {};
-    this.verticesName = {};
+function Edge(v, weight) {
+    this.vertex = v;
+    this.weight = weight
+}
 
-    // the paths in the digraph obj
-    this.paths = [];
+function Digraph() {    
+    this.vertices = [];
 }
 
 Digraph.prototype = {
-
-    /**
-     * This function add a path to the digraph from starting point to ending point with a weight, asserting graph
-     * constraints and param types.
-     *
-     * Starting and ending point should be a valid string and weight should be a not negative number.
-     * The starting and ending point can not be equal (there's no cyclic paths by definition, eg. A to A).
-     *
-     */
-    addPath: function(startingPoint, endingPoint, weight) {
-
-        assert.equal(typeof startingPoint, 'string', 'Argument startingPoint should be a string');
-        assert.notStrictEqual(startingPoint, '', 'Argument startingPoint should be a valid string');
-
-        assert.equal(typeof endingPoint, 'string', 'Argument endingPoint should be a string');
-        assert.notStrictEqual(endingPoint, '', 'Argument ending should be a valid string');
-
+    
+    addEdge: function(v, w, weight) {
+        assert(v, true, 'Argument v is not valid');
+        assert(w, true, 'Argument w is not valid');
         assert.equal(typeof weight, 'number', 'Argument weight should be a number');
         assert.equal(true, (weight >= 0), 'Argument weight should not be negative');
+        assert.notStrictEqual(v, w, 'Argument v and w should not be equal');
+        
+        var self = this;
+        var vRef = self.vertices[v];
+        var wRef = self.vertices[w];
 
-        //digraph constraint
-        assert.notStrictEqual(startingPoint, endingPoint, 'Argument startingPoint and ending should not be equal');
-
-        var sidx = this.addOrFindVertex(startingPoint);
-        var eidx = this.addOrFindVertex(endingPoint);
-
-        // paths from startingPoint
-        var p = this.paths[sidx];
-
-        p.push({ 'vertex': eidx, 'weight': weight });
-        return p;
-    },
-
-    addOrFindVertex: function(vertexName) {
-
-        assert.equal(typeof vertexName, 'string', 'Argument vertexName should be a string');
-        assert.notStrictEqual(vertexName, '', 'Argument vertexName should be a valid string');
-
-        var idx = this.verticesIndex[vertexName];
-
-        if (idx === undefined) {
-            idx = this.paths.push([]);
-            idx--;
-            this.verticesIndex[vertexName] = idx;
-            this.verticesName[idx] = vertexName;
-            return idx;
+        if (!vRef) {
+            var vRef = new Vertex(v);
+            self.vertices[vRef.id] = vRef;
         }
-        return idx;
-    },
-
-    getVertexIndex: function(vertexName) {
-        var idx = this.verticesIndex[vertexName];
-        if (idx === undefined) {
-            return -1;
+        if (!wRef) {
+            var wRef = new Vertex(w);
+            self.vertices[wRef.id] = wRef;
         }
-        return idx;
+        var e = new Edge(wRef.id, weight);
+        vRef.edges.push(e);
     },
-
-    getVertexName: function(idx) {
-        return this.verticesName[idx];
-    },
-
-    getPathsFrom: function(startingPoint) {
-        var idx = this.getVertexIndex(startingPoint);
-        return (idx === undefined) ? undefined : this.paths[idx];
+    
+    getVertex: function(v) {
+        return this.vertices[v];
     }
 }
