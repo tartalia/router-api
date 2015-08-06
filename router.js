@@ -7,95 +7,153 @@
   *
   */
 module.exports = Router;
+var assert = require('assert');
 
 function Router(graph) {
 
     this.graph = graph;
     this.dfsCache = {};
+    this.dfsDistanceCache = {};
     var that = this;
-
-    function Route() {
-        this.path = [];
-        this.distance = 0;
-    }
+    
+    // public methods
 
     /**
      * Public interface to Depth-First Search algorithm.
      *
-     * Find the route vi - vf in the cache, and if not found, run dfs search. Otherwise return from cache.
+     * Search the route target / source in the cache, and if not found, run dfs search. Otherwise return from cache.
+     * 
+     * @param source - The source destination
+     * @target target - The target destination
+     * @return An array ou routes from source to target
      *
      */
-    this.dfs = function(vi, vf) {
-        //cache key
-        var k = vi + vf;
-
+    this.searchRoutes = function(source, target) {
+        assert(source, true, 'source should not be null');
+        assert(target, true, 'target should not be null');        
+        var k = source + target;
         if (that.dfsCache[k]) {
             return that.dfsCache[k];
         }
 
         var routes = [];
-        var explored = {};
+        var explored = [];
         var route = new Route();
-        var endRoutes = [];
-
-        dfsSearch(vi, vf, explored, routes, route, 0);
-        that.dfsCache[k] = routes;
-
+        
+        dfsSearch(source, target, explored, routes, route, 0, null);
+        that.dfsCache[k] = routes; 
         return routes;
     }
-
-    /**
-     * Public interface to find the shortes path. Uses Depth-First Search algorithm to compute all paths.
-     *
-     * TODO - Implement Dijkstra
-     */
-    this.shortest = function(vi, vf) {
-        var routes = this.dfs(vi, vf);
-        var shortest;
-
-        routes.forEach(function(route, idx, arr) {
-            if (!shortest) {
-                shortest = route;
-            } else {
-                if (route.distance < shortest.distance) {
-                    shortest = route;
-                }
-            }
-        });
-        return shortest;
-    }
-
-    /**
-     * Depht-first search variation to find all possible paths from a source to destination. Not best at all,
-     * because an node could be visited more than once.
-     *
-     * TODO - Implement DFS without visiting an node more than once
-     */
-    function dfsSearch(vi, vf, explored, routes, route, weight) {
-        if (vi !== vf) {
-            explored[vi] = true;
+    
+    this.searchRoutesByDistance = function(source, target, maxWeight) {
+        assert(source, true, 'source should not be null');
+        assert(target, true, 'target should not be null');
+        assert(maxWeight, true, 'maxWeight should not be null');
+        assert(maxWeight > 0 , true, 'maxWeight should be greater than 0');
+        
+        var k = source + target;
+        if (that.dfsDistanceCache[k]) {
+            return that.dfsDistanceCache[k];
         }
 
-        route.path.push(vi);
+        var routes = [];
+        var route = new Route();
+
+        dfsSearchByDistance(source, target, routes, route, 0, maxWeight);
+        that.dfsDistanceCache[k] = routes;
+        return routes;
+    }
+    
+    this.searchRoutesByStops = function(source, target, maxStops, strictStops) {
+        assert(source, true, 'source should not be null');
+        assert(target, true, 'target should not be null');
+        assert(maxStops, true, 'maxWeight should not be null');
+        assert(maxStops > 0 , true, 'maxStop should greater than 1');
+
+        var routes = [];
+        var route = new Route();
+
+        dfsSearchByStops(source, target, routes, route, maxStops, strictStops);
+        return routes;
+    }
+    
+    function Route() {
+        this.path = [];
+        this.distance = 0;
+        this.stops = -1;
+    }
+
+    //source / target
+    function dfsSearch(source, target, explored, routes, route, weight) {
+        if (source !== target) {
+            explored[source] = true;
+        }
+
+        route.path.push(source);
         route.distance = route.distance + weight;
 
-        if (vi === vf && weight > 0) {
+        // get into target if no cycle route?
+        if (source === target && weight > 0) {
             routes.push(JSON.parse(JSON.stringify(route)));
         }
 
-        var paths = that.graph.getPathsFrom(vi);
-
-        paths.forEach(function(el, idx, arr) {
-            var vName = that.graph.getVertexName(el.vertex);
-            //console.log('vertex: ' + vName);
-            //console.log('');
-            if (!explored[vName]) {
-                dfsSearch(vName, vf, explored, routes, route, el.weight);
+        var edges = that.graph.getVerticesFrom(source);
+        edges.forEach(function(edge, idx, arr) {
+            if (!explored[edge.vertex]) {
+                dfsSearch(edge.vertex, target, explored, routes, route, edge.weight);
             }
         });
-        route.path.pop()
-        route.distance = route.distance - weight;
-        explored[vi] = false;
+        
+        //back track route
+        route.path.pop();
+        route.distance = route.distance - weight;        
+        explored[source] = false;        
+    }
+
+    //source / target
+    function dfsSearchByDistance(source, target, routes, route, distance, maxDistance) {
+        route.path.push(source);
+        route.distance = route.distance + distance;
+
+        // get into target if no cycle route?
+        if (source === target && distance > 0 && route.distance <= maxDistance) {
+            routes.push(JSON.parse(JSON.stringify(route)));
+        }
+
+        var edges = that.graph.getVerticesFrom(source);
+        edges.forEach(function(edge, idx, arr) {
+            if (route.distance <= maxDistance) {
+                dfsSearchByDistance(edge.vertex, target, routes, route, edge.weight, maxDistance);
+            }
+        });
+
+        route.path.pop();
+        route.distance = route.distance - distance;
+    }
+    
+    //source / target
+    function dfsSearchByStops(source, target, routes, route, maxStops, strictStops) {
+        route.path.push(source);
+        route.stops = route.stops + 1;
+        
+        // get into target if no cycle route?
+        if (strictStops && source === target && route.stops > 0 && route.stops === maxStops) {
+            routes.push(JSON.parse(JSON.stringify(route)));
+        } 
+
+        if (!strictStops && source === target && route.stops > 0 && route.stops <= maxStops) {
+            routes.push(JSON.parse(JSON.stringify(route)));
+        }
+
+        var edges = that.graph.getVerticesFrom(source);
+        edges.forEach(function(edge, idx, arr) {
+            if (route.stops <= maxStops) {
+                dfsSearchByStops(edge.vertex, target, routes, route, maxStops, strictStops);
+            }
+        });
+
+        route.path.pop();
+        route.stops = route.stops - 1;
     }
 
     /**

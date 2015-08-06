@@ -15,8 +15,7 @@ var assert = require('assert');
 module.exports.Digraph = Digraph;
 module.exports.Vertex = Vertex; 
 
-function Vertex(id) {
-    this.id = id;
+function Vertex() {
     this.edges = [];
 }
 
@@ -43,18 +42,26 @@ Digraph.prototype = {
         var wRef = self.vertices[w];
 
         if (!vRef) {
-            var vRef = new Vertex(v);
-            self.vertices[vRef.id] = vRef;
+            var vRef = new Vertex();
+            self.vertices[v] = vRef;
         }
         if (!wRef) {
-            var wRef = new Vertex(w);
-            self.vertices[wRef.id] = wRef;
+            var wRef = new Vertex();
+            self.vertices[w] = wRef;
         }
-        var e = new Edge(wRef.id, weight);
+        var e = new Edge(w, weight);
         vRef.edges.push(e);
     },
+
+    getVerticesFrom: function(v) {
+        var ref = this.vertices[v];
+        if (ref) {
+            return ref.edges;
+        }
+        return ref;
+    },
     
-    getVertex: function(v) {
-        return this.vertices[v];
+    getVertices: function() {
+        return this.vertices;   
     }
 }
