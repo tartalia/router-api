@@ -1,12 +1,16 @@
 'use strict';
+module.exports = Router;
 
 /**
-  * This class provide functionality to search routes between paths in a directed graph.
-  *
-  * Should inject the graph when creating an instance object. 
-  *
-  */
-module.exports = Router;
+ * This class provide functionality to search routes between source and targets in a directed graph, using 
+ * Depth-Search First variations to search routes by distance, number of stops, and the DFS itself with backtracking
+ * functionality, searching for all routes between two nodes in the graph. 
+ * 
+ * This class also provide functionality to search the shortest route between two nodes, using Dijkstra algorithm.
+ *
+ * Author: Rafael Tartalia (rafael.tartalia@gmail.com)
+ */
+
 var assert = require('assert');
 var Queue = require('./priority_queue');
 
@@ -20,19 +24,19 @@ function Router(graph) {
     // public methods
 
     /**
-     * Public interface to Depth-First Search algorithm.
+     * Depth-First Search algorithm with back tracking to seach all routes between source and target. This algorithm does not
+     * run on O(M+N).
      *
      * Search the route target / source in the cache, and if not found, run dfs search. Otherwise return from cache.
      * 
      * @param source - The source destination
      * @target target - The target destination
      * @return An array ou routes from source to target
-     *
      */
     this.searchRoutes = function(source, target) {
-        assert(source, true, 'source should not be null');
-        assert(target, true, 'target should not be null');
-        
+        if (!source) { throw new Error('source should not be null'); }
+        if (!target) { throw new Error('target should not be null'); }
+
         var k = source + target;
         if (that.dfsCache[k]) {
             return that.dfsCache[k];
@@ -47,11 +51,22 @@ function Router(graph) {
         return routes;
     }
     
+    /**
+     * Depth-First Search algorithm with cyclic route search. The search don't stop until the maxWeight is reached.
+     * A very high maxWeight can cause problem. 
+     *
+     * Search the route target / source in the cache, and if not found, run dfs search. Otherwise return from cache.
+     * 
+     * @param source The source destination
+     * @param target target The target destination
+     * @param maxWeight The maximum weight route to search
+     * @return An array ou routes from source to target with weight <= maxWeight
+     */
     this.searchRoutesByDistance = function(source, target, maxWeight) {
-        assert(source, true, 'source should not be null');
-        assert(target, true, 'target should not be null');
-        assert(maxWeight, true, 'maxWeight should not be null');
-        assert(maxWeight > 0 , true, 'maxWeight should be greater than 0');
+        if (!source) { throw new Error('source should not be null'); }
+        if (!target) { throw new Error('target should not be null'); }
+        if (!maxWeight) { throw new Error('maxWeight should not be null'); }
+        if (maxWeight <= 0) { throw new Error('maxWeight should be greater than 1'); }
         
         var k = source + target;
         if (that.dfsDistanceCache[k]) {
@@ -66,11 +81,25 @@ function Router(graph) {
         return routes;
     }
     
+
+    /**
+     * Depth-First Search algorithm with cyclic route search. The search don't stop until the maxStops is reached.
+     * A very high maxStops can cause problem. If strictStops true, the search will return only routes with exactly 
+     * maxStops. 
+     *
+     * Search the route target / source in the cache, and if not found, run dfs search. Otherwise return from cache.
+     * 
+     * @param source The source destination
+     * @param target target The target destination
+     * @param maxStops The maximum stops route to search
+     * @param strictStops Restrict the search to find only routes with exactly maxStops stops
+     * @return An array ou routes from source to target with stops <= maxStops, or stops === maxStops, if strictStops === true
+     */
     this.searchRoutesByStops = function(source, target, maxStops, strictStops) {
-        assert(source, true, 'source should not be null');
-        assert(target, true, 'target should not be null');
-        assert(maxStops, true, 'maxWeight should not be null');
-        assert(maxStops > 0 , true, 'maxStop should greater than 1');
+        if (!source) { throw new Error('source should not be null'); }
+        if (!target) { throw new Error('target should not be null'); }
+        if (!maxStops) { throw new Error('maxStops should not be null'); }
+        if (maxStops <= 0 ) { throw new Error('maxStops should be greater than 1'); }
 
         var routes = [];
         var route = new Route();
@@ -79,15 +108,25 @@ function Router(graph) {
         return routes;
     }
     
-    this.searchShortest = function(source, target) {
-        console.log('searchShortest');
-        var route = new Route();
+    /**
+     * Dijkstra Search algorithm. The algorith will search all routes from a source, and will return only the distance
+     * to the target. Run in O(|V|log|V|). 
+     *
+     * @param source The source destination
+     * @param target target The target destination
+     * @return The shortest path from source to target
+     */
+    this.searchShortestRouteDistance = function(source, target) {
+        if (!source) { throw new Error('source should not be null'); }
+        if (!target) { throw new Error('target should not be null'); }
+
+        var route = new Route();        
         var explored = [];
         var distanceTo = [];
         assert(source, true, 'source should not be null');
         assert(target, true, 'target should not be null');        
-        //bfsSearchShortest(source, target, explored, route);
         dijkstraSearch(source, target, distanceTo);
+        return distanceTo[target];
     }
 
     //private methods and objects
@@ -125,7 +164,7 @@ function Router(graph) {
         explored[source] = false;        
     }
 
-    //source / target
+    //DFS cyclic search by distance
     function dfsSearchByDistance(source, target, routes, route, distance, maxDistance) {
         route.path.push(source);
         route.distance = route.distance + distance;
@@ -146,7 +185,7 @@ function Router(graph) {
         route.distance = route.distance - distance;
     }
     
-    //source / target
+    //DFS cyclic search by stops
     function dfsSearchByStops(source, target, routes, route, maxStops, strictStops) {
         route.path.push(source);
         route.stops = route.stops + 1;
@@ -171,53 +210,19 @@ function Router(graph) {
         route.stops = route.stops - 1;
     }
 
-    /**
-     * Breadth-First Search algorithm to find the shortest path from source to destination.
-     *
-     */
-    function bfsSearchShortest(source, target, explored, route) {
-        var queue = [];
-        var distances = [];
-
-        queue.push(source);
-        route.path.push(source);
-        distances[source] = 0;
-        
-        while (queue.length > 0) {
-            var vertex = queue.shift();
-            console.log(vertex);
-            var edges = that.graph.getVerticesFrom(vertex);    
-            edges.forEach(function(edge, idx, arr) {
-                if (!explored[edge.vertex]) {
-                    queue.push(edge.vertex);
-                    explored[edge.vertex] = true;
-                    distances[edge.vertex] = distances[vertex] + edge.weight;
-                }
-            });
-        }
-        console.log(distances);
-    }
-
     function dijkstraSearch(source, target, distanceTo) {
-        var distanceTo = [];
         var edgeTo = [];
         var queue = new Queue();
-        
-        
 
         distanceTo[source] = 0;
         queue.enqueue(source, distanceTo[source]);
         while(!queue.isEmpty()) {
             var vertex = queue.unqueue();
             var edges = that.graph.getVerticesFrom(vertex.key);
-            console.log('vertex: ' + JSON.stringify(vertex));
             edges.forEach(function(edge, idx, arr) {
-                console.log('edge: ' + JSON.stringify(edge));
                 relax(vertex, edge, distanceTo, edgeTo, queue);
             });
         }
-        console.log(distanceTo);
-        console.log(edgeTo);
     }
 
     //relaxation method for dijkstra algorithm
