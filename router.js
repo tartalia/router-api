@@ -90,13 +90,15 @@ function Router(graph) {
         dijkstraSearch(source, target, distanceTo);
     }
 
+    //private methods and objects
+
     function Route() {
         this.path = [];
         this.distance = 0;
         this.stops = -1;
     }
 
-    //source / target
+    // DFS search
     function dfsSearch(source, target, explored, routes, route, weight) {
         if (source !== target) {
             explored[source] = true;
@@ -195,7 +197,7 @@ function Router(graph) {
         }
         console.log(distances);
     }
-    
+
     function dijkstraSearch(source, target, distanceTo) {
         var distanceTo = [];
         var edgeTo = [];
@@ -218,6 +220,7 @@ function Router(graph) {
         console.log(edgeTo);
     }
 
+    //relaxation method for dijkstra algorithm
     function relax(source, edge, distanceTo, edgeTo, queue) {
         var vertex = source.key;
 
