@@ -20,7 +20,7 @@ var arr;
 
 function output(n, v) {
     if (!v) {
-        v = 'NO SUCH ROUTE';   
+        v = 'NO SUCH ROUTE';
     }
     console.log('Output ' + n + '#: ' + v);
 }

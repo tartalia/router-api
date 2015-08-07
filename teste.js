@@ -29,7 +29,7 @@ var router = new Router(digraph);
 //var routes = router.dfs('C', 'C');
 //console.log(routes);
 
-console.log('by distance');
+/*console.log('by distance');
 var byDistance = router.searchRoutesByDistance('C', 'C', 29);
 console.log(byDistance);
 
@@ -43,4 +43,9 @@ console.log(byStops2);
 
 console.log('by stops 3');
 var byStops3 = router.searchRoutesByStops('A', 'C', 4, true);
-console.log(byStops3);
+console.log(byStops3);*/
+
+//router.searchShortest('A', 'C');
+//router.searchShortest('B', 'B');
+//router.searchShortest('C', 'C');
+router.searchShortest('C', 'E');

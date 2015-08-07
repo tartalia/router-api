@@ -8,6 +8,7 @@
   */
 module.exports = Router;
 var assert = require('assert');
+var Queue = require('./priority_queue');
 
 function Router(graph) {
 
@@ -30,7 +31,8 @@ function Router(graph) {
      */
     this.searchRoutes = function(source, target) {
         assert(source, true, 'source should not be null');
-        assert(target, true, 'target should not be null');        
+        assert(target, true, 'target should not be null');
+        
         var k = source + target;
         if (that.dfsCache[k]) {
             return that.dfsCache[k];
@@ -77,6 +79,17 @@ function Router(graph) {
         return routes;
     }
     
+    this.searchShortest = function(source, target) {
+        console.log('searchShortest');
+        var route = new Route();
+        var explored = [];
+        var distanceTo = [];
+        assert(source, true, 'source should not be null');
+        assert(target, true, 'target should not be null');        
+        //bfsSearchShortest(source, target, explored, route);
+        dijkstraSearch(source, target, distanceTo);
+    }
+
     function Route() {
         this.path = [];
         this.distance = 0;
@@ -106,7 +119,7 @@ function Router(graph) {
         
         //back track route
         route.path.pop();
-        route.distance = route.distance - weight;        
+        route.distance = route.distance - weight;
         explored[source] = false;        
     }
 
@@ -139,7 +152,7 @@ function Router(graph) {
         // get into target if no cycle route?
         if (strictStops && source === target && route.stops > 0 && route.stops === maxStops) {
             routes.push(JSON.parse(JSON.stringify(route)));
-        } 
+        }
 
         if (!strictStops && source === target && route.stops > 0 && route.stops <= maxStops) {
             routes.push(JSON.parse(JSON.stringify(route)));
@@ -157,10 +170,65 @@ function Router(graph) {
     }
 
     /**
-     * TODO: Dijkstra algorithm to find the shortets path between two nodes.
+     * Breadth-First Search algorithm to find the shortest path from source to destination.
      *
      */
-    function dijkstraSearch(vi, vf, explored, weight, queue) {
+    function bfsSearchShortest(source, target, explored, route) {
+        var queue = [];
+        var distances = [];
 
+        queue.push(source);
+        route.path.push(source);
+        distances[source] = 0;
+        
+        while (queue.length > 0) {
+            var vertex = queue.shift();
+            console.log(vertex);
+            var edges = that.graph.getVerticesFrom(vertex);    
+            edges.forEach(function(edge, idx, arr) {
+                if (!explored[edge.vertex]) {
+                    queue.push(edge.vertex);
+                    explored[edge.vertex] = true;
+                    distances[edge.vertex] = distances[vertex] + edge.weight;
+                }
+            });
+        }
+        console.log(distances);
+    }
+    
+    function dijkstraSearch(source, target, distanceTo) {
+        var distanceTo = [];
+        var edgeTo = [];
+        var queue = new Queue();
+        
+        
+
+        distanceTo[source] = 0;
+        queue.enqueue(source, distanceTo[source]);
+        while(!queue.isEmpty()) {
+            var vertex = queue.unqueue();
+            var edges = that.graph.getVerticesFrom(vertex.key);
+            console.log('vertex: ' + JSON.stringify(vertex));
+            edges.forEach(function(edge, idx, arr) {
+                console.log('edge: ' + JSON.stringify(edge));
+                relax(vertex, edge, distanceTo, edgeTo, queue);
+            });
+        }
+        console.log(distanceTo);
+        console.log(edgeTo);
+    }
+
+    function relax(source, edge, distanceTo, edgeTo, queue) {
+        var vertex = source.key;
+
+        if (!distanceTo[edge.vertex] || (distanceTo[edge.vertex] > (distanceTo[vertex] + edge.weight))) {
+            distanceTo[edge.vertex] = distanceTo[vertex] + edge.weight;
+            edgeTo[edge.vertex] = vertex;
+            if (queue.hasItem(edge.vertex)) {
+                queue.decreasePriority(edge.vertex, distanceTo[edge.vertex]);
+            } else {
+                queue.enqueue(edge.vertex, edge.weight);
+            }
+        }
     }
 }
